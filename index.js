@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { MongoClient } from 'mongodb';
 import 'dotenv/config'
+import { ObjectId } from "mongodb";
 
 
 const app = express()
@@ -40,11 +41,53 @@ app.get("/users" , async(req, res) => {
 })
 
 // job related api 
+app.get('/jobs', async(req, res) => {
+    const cursor = jobs.find({});
+    const result = await cursor.toArray();
+    res.send(result)
+})
+
 app.post('/jobs', async(req, res) => {
  const job = req.body;
  const result = await jobs.insertOne(job);
  res.send(result)
 })
+
+app.delete("/jobs/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({
+        message: "Invalid job ID",
+      });
+    }
+
+    const result = await jobs.deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({
+        message: "Job not found",
+      });
+    }
+
+    res.send({
+      success: true,
+      message: "Job deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete job error:", error);
+
+    res.status(500).send({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
+    });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
