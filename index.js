@@ -89,6 +89,111 @@ app.delete("/jobs/:id", async (req, res) => {
   }
 });
 
+app.get("/jobs/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({
+        message: "Invalid job ID",
+      });
+    }
+
+    const job = await jobs.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!job) {
+      return res.status(404).send({
+        message: "Job not found",
+      });
+    }
+
+    res.send(job);
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to get job details",
+    });
+  }
+});
+
+
+// Update job
+app.patch("/jobs/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const jobData = req.body;
+
+    // Check valid job ID
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
+
+    // Check job exists
+    const existingJob = await jobs.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!existingJob) {
+      return res.status(404).send({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    // Allowed fields to update
+    const allowedFields = [
+      "title",
+      "companyName",
+      "category",
+      "jobType",
+      "remoteAllowed",
+      "location",
+      "description",
+      "salary",
+      "deadline",
+    ];
+
+    // Prepare updated data
+    const updatedData = {};
+
+    allowedFields.forEach((field) => {
+      if (jobData[field] !== undefined) {
+        updatedData[field] = jobData[field];
+      }
+    });
+
+    // Update job in MongoDB
+    const result = await jobs.updateOne(
+      {
+        _id: new ObjectId(id),
+      },
+      {
+        $set: {
+          ...updatedData,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    res.send({
+      success: true,
+      message: "Job updated successfully",
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Update job error:", error);
+
+    res.status(500).send({
+      success: false,
+      message: "Failed to update job",
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
